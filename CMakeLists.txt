@@ -8,32 +8,36 @@ set(PICO_BOARD pico_w CACHE STRING "Board type")
 
 include(pico_sdk_import.cmake)
 
+
 project(led_control_webserver C CXX ASM)
+
 
 pico_sdk_init()
 
-add_executable(led_control_webserver principal_iot.c)
+add_executable(led_control_webserver 
+    principal_iot.c
+    lib/ssd1306.c # Biblioteca para o display OLED    
+ )
+
 
 # Adicionando arquivo pio
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/generated)
-pico_generate_pio_header(led_control_webserver ${CMAKE_CURRENT_LIST_DIR}/generated/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
-
-pico_set_program_name(led_control_webserver "led_control_webserver")
-pico_set_program_version(led_control_webserver "0.1")
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/lib)
+pico_generate_pio_header(led_control_webserver ${CMAKE_CURRENT_LIST_DIR}/lib/ws2818b.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/lib)
 
 # Configuração do UART/USB
-pico_enable_stdio_uart(${PROJECT_NAME} 0)
-pico_enable_stdio_usb(${PROJECT_NAME} 1)
+pico_enable_stdio_uart(led_control_webserver 0)
+pico_enable_stdio_usb(led_control_webserver 1)
 
 # Add the standard library to the build
 target_link_libraries(led_control_webserver
-        pico_stdlib
-        hardware_gpio
-        hardware_adc
-        pico_cyw43_arch_lwip_threadsafe_background
-        hardware_pio
-        hardware_clocks
-        hardware_uart  
+    pico_stdlib                      # Biblioteca padrão do SDK do Raspberry Pi Pico, funções básicas e utilitários
+    hardware_gpio                   # Controle dos pinos GPIO para leitura e escrita digital
+    hardware_adc                    # Conversor analógico-digital para leitura de sinais analógicos
+    pico_cyw43_arch_lwip_threadsafe_background  # Integração do Wi-Fi CYW43 com a pilha TCP/IP lwIP para comunicação de rede
+    hardware_pio                    # Suporte ao periférico PIO para criação de interfaces personalizadas
+    hardware_clocks                 # Controle e configuração dos clocks internos do microcontrolador
+    hardware_uart                   # Comunicação serial assíncrona via UART
+    hardware_i2c                   # Comunicação do display
 )
 
 # Add the standard include files to the build

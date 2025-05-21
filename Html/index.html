@@ -1,169 +1,123 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Estacionamento Inteligente</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simulador de Estacionamento</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 2rem;
-      background-color: #f0f0f0;
+      background-color: #f2f2f2;
+      padding: 20px;
+      text-align: center;
     }
-
     h1 {
-      margin-bottom: 1rem;
+      color: #333;
     }
-
-    label,
-    input {
-      font-size: 1rem;
-      margin: 0.2rem 0;
+    #matriz {
+      display: grid;
+      grid-template-columns: repeat(5, 60px);
+      grid-gap: 10px;
+      justify-content: center;
+      margin-top: 20px;
     }
-
-    input {
-      padding: 0.4rem;
-      width: 200px;
-    }
-
-    .botao-acao {
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      border: none;
-      border-radius: 5px;
-      background-color: #3498db;
-      color: white;
+    button.vaga {
+      padding: 20px;
+      font-size: 16px;
       cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #4caf50;
+      color: white;
+      transition: background-color 0.3s;
     }
-
-    .botao-acao:hover {
-      background-color: #2980b9;
+    button.vaga.ocupada {
+      background-color: #f44336;
     }
-
-    #ip-section {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 1rem;
-    }
-
     #resultado {
-      margin-top: 1rem;
-      background: white;
-      padding: 1rem;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #ccc;
+      margin-top: 20px;
+      font-size: 18px;
+      color: #333;
     }
-
-    .vagas {
-      display: flex;
-      flex-wrap: wrap;
-      margin-top: 1rem;
+    #ip-input {
+      margin-top: 20px;
     }
-
-    .vaga {
-      margin: 5px;
-    }
-
-    .vaga button {
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      border: none;
+    input[type="text"] {
+      padding: 8px;
+      font-size: 16px;
+      width: 200px;
       border-radius: 5px;
-      background-color: #bdc3c7;
-      color: black;
-      cursor: pointer;
+      border: 1px solid #ccc;
     }
-
-    .vaga button.ocupada {
-      background-color: #3498db;
-      color: white;
+    button#atualizar {
+      padding: 8px 16px;
+      margin-left: 10px;
+      font-size: 16px;
     }
   </style>
 </head>
-
 <body>
   <h1>Simulador de Estacionamento</h1>
 
-  <div id="ip-section">
-    <label for="ip">IP da Pico W:</label>
-    <input type="text" id="ip" value="192.168.68.146" />
-    <button class="botao-acao" onclick="verificarConexao()">Verificar Conexão</button>
+  <div id="ip-input">
+    <label for="ip">Endereço IP da Pico W:</label>
+    <input type="text" id="ip" placeholder="Ex: 192.168.1.123" />
+    <button id="atualizar">Atualizar status</button>
   </div>
 
-  <div class="vagas" id="vagas"></div>
-  <div id="resultado">Aguardando ação...</div>
+  <div id="matriz"></div>
+  <div id="resultado"></div>
 
   <script>
-    const totalVagas = 25;
-    let botoes = [];
+    const matriz = document.getElementById("matriz");
+    const botoes = [];
 
-    window.onload = () => {
-      const vagasDiv = document.getElementById("vagas");
-      for (let i = 0; i < totalVagas; i++) {
-        const btn = document.createElement("button");
-        btn.textContent = `Vaga ${i + 1}`;
-        btn.onclick = () => reservarOuLiberar(i);
-        const div = document.createElement("div");
-        div.className = "vaga";
-        div.appendChild(btn);
-        vagasDiv.appendChild(div);
-        botoes.push(btn);
-      }
-    };
-
-    async function reservarOuLiberar(id) {
-      const ip = document.getElementById("ip").value;
-      const resultado = document.getElementById("resultado");
-      resultado.textContent = "Enviando requisição...";
-
-      try {
-        const response = await fetch(`http://${ip}/vaga${id}`);
-        if (!response.ok) throw new Error("Falha ao acessar a Pico W");
-
-        const json = await response.json();
-
-        if (!("vaga" in json) || !("ocupada" in json)) {
-          throw new Error("Resposta inválida da Pico W");
-        }
-
-        const ocupado = json.ocupada;
-        const btn = botoes[json.vaga];
-
-        btn.classList.toggle("ocupada", ocupado);
-
-        resultado.innerHTML = `Vaga ${json.vaga + 1} agora está <strong>${ocupado ? "ocupada" : "livre"}</strong>`;
-      } catch (e) {
-        resultado.textContent = "Erro ao comunicar com a Pico W: " + e.message;
-      }
+    for (let i = 1; i <= 25; i++) {
+      const btn = document.createElement("button");
+      btn.className = "vaga";
+      btn.textContent = i;
+      btn.onclick = () => {
+        alert("Enviando vaga: " + i);
+        reservarOuLiberar(i);
+      };
+      botoes.push(btn);
+      matriz.appendChild(btn);
     }
 
-    async function verificarConexao() {
+    document.getElementById("atualizar").onclick = obterStatus;
+
+    function reservarOuLiberar(id) {
+      const ip = document.getElementById("ip").value;
+      fetch(`http://${ip}/vaga${id}`)
+        .catch(e => {
+          console.warn("Falha ao enviar para Pico W:", e.message);
+        });
+    }
+
+    async function obterStatus() {
       const ip = document.getElementById("ip").value;
       const resultado = document.getElementById("resultado");
-      resultado.textContent = "Verificando conexão...";
+      resultado.textContent = "Consultando status das vagas...";
 
       try {
         const response = await fetch(`http://${ip}/status`);
-        if (!response.ok) throw new Error("Sem resposta da Pico W");
+        if (!response.ok) throw new Error("Erro ao obter status das vagas");
 
-        const data = await response.json();
+        const json = await response.json();
 
-        if (!data.vagas || data.vagas.length !== totalVagas) {
-          throw new Error("Resposta JSON malformada.");
+        if (!Array.isArray(json.vagas)) {
+          throw new Error("Resposta inválida da Pico W");
         }
 
-        for (let i = 0; i < totalVagas; i++) {
-          botoes[i].classList.toggle("ocupada", data.vagas[i] === 1);
-        }
+        json.vagas.forEach((ocupado, index) => {
+          botoes[index].classList.toggle("ocupada", ocupado);
+        });
 
-        resultado.innerHTML = "<strong>Conexão OK!</strong> Vagas atualizadas.";
+        resultado.textContent = "Status das vagas atualizado!";
       } catch (e) {
-        resultado.textContent = "Erro na conexão: " + e.message;
+        resultado.textContent = "Erro ao obter status: " + e.message;
       }
     }
   </script>
 </body>
-
 </html>
